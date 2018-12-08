@@ -1,0 +1,8 @@
+touch.c:65:6:tpd_down	16	static
+touch.c:76:6:tpd_up	16	static
+touch.c:87:6:input_sync	16	static
+touch.c:105:10:getTouchPtr	4	static
+touch.c:112:10:getTouchQualityKeyPtr	4	static
+touch.c:118:6:HAL_GPIO_EXTI_Callback	16	static
+touch.c:126:6:initTouch	16	static
+touch.c:145:6:toucuProc	136	static
