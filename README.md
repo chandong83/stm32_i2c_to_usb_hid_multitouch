@@ -14,3 +14,6 @@ Touch Controller is FT5316
 ![](./images/monitor2.jpg)
 
 
+### Demo Video Link
+https://youtu.be/WPxBueGO-0M
+
