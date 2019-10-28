@@ -17,3 +17,6 @@ Touch Controller is FT5316
 ### Demo Video Link
 https://youtu.be/WPxBueGO-0M
 
+### Demo Video Link(on Windows 10)
+https://youtu.be/_ofgHura1hs
+
