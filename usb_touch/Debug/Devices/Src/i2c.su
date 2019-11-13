@@ -1,9 +1,0 @@
-i2c.c:32:6:delay1us	24	static
-i2c.c:43:6:initI2C	24	static
-i2c.c:62:6:i2c_start	8	static
-i2c.c:72:6:i2c_stop	8	static
-i2c.c:84:6:Initial_I2C	8	static
-i2c.c:90:9:i2c_write	40	static
-i2c.c:146:9:i2c_read	24	static
-i2c.c:182:9:readI2C	32	static
-i2c.c:240:9:writeI2C	24	static
