@@ -19,9 +19,11 @@ extern USBD_HandleTypeDef hUsbDeviceFS;
 extern uint8_t USBD_HID_SendReport (USBD_HandleTypeDef  *pdev, uint8_t *report, uint16_t len);
 
 static uint8_t touchIrq = 0;
-static uint16_t oldX[max_point_num]={0,};
-static uint16_t oldY[max_point_num]={0,};
-static uint8_t p_point_num = 0;
+//static uint16_t oldX[max_point_num]={0,};
+//static uint16_t oldY[max_point_num]={0,};
+static uint16_t oldid[max_point_num];
+//static uint8_t p_point_num = 0;
+
 
 //https://docs.microsoft.com/en-us/windows-hardware/design/component-guidelines/touch-and-pen-support
 const uint8_t touchQualityKey[] = {
@@ -64,24 +66,26 @@ struct multiTouchHid_t multiTouch;
 
 void tpd_down(uint16_t x, uint16_t y, uint16_t p)
 {
-	multiTouch.touch[p].tip = 0x01;
-	multiTouch.touch[p].num = p;   //contact id
-	multiTouch.touch[p].x = x;
-	multiTouch.touch[p].y = y;
-	multiTouch.touch[p].width = 0x30; //width of contact
-	multiTouch.touch[p].height = 0x30;
+	multiTouch.touch[multiTouch.id].tip = 0x01;
+	multiTouch.touch[multiTouch.id].num = p;   //contact id
+	multiTouch.touch[multiTouch.id].x = x;
+	multiTouch.touch[multiTouch.id].y = y;
+	multiTouch.touch[multiTouch.id].width = 0x30; //width of contact
+	multiTouch.touch[multiTouch.id].height = 0x30;
 	multiTouch.id++;
 
 }
 void tpd_up(uint16_t x, uint16_t y, uint16_t p)
 {
 	multiTouch.touch[multiTouch.id].tip = 0x00;
-	multiTouch.touch[multiTouch.id].num = multiTouch.id;
-	multiTouch.touch[multiTouch.id].x = x;
-	multiTouch.touch[multiTouch.id].y = y;
-	multiTouch.touch[multiTouch.id].width = 0x30;
-	multiTouch.touch[multiTouch.id].height = 0x30;
+	//multiTouch.touch[multiTouch.id].num = multiTouch.id;
+	multiTouch.touch[multiTouch.id].num = p;
+	//multiTouch.touch[multiTouch.id].x = x;
+	//multiTouch.touch[multiTouch.id].y = y;
+	multiTouch.touch[multiTouch.id].width = 0;
+	multiTouch.touch[multiTouch.id].height = 0;
 	multiTouch.id++;
+
 }
 
 void input_sync()
@@ -93,6 +97,7 @@ void input_sync()
 	{
 		printf("\n[%d:%d] x : %d, y : %d, %d\n",multiTouch.id, multiTouch.touch[i].tip, multiTouch.touch[i].x,multiTouch.touch[i].y, multiTouch.count);
 	}*/
+	//HAL_UART_Transmit_IT(&huart3, (uint8_t*)&multiTouch, sizeof(multiTouch));
 	USBD_HID_SendReport(&hUsbDeviceFS, (uint8_t*)&multiTouch, sizeof(struct multiTouchHid_t));
 	multiTouch.id=0;
 	for(int i=0;i<max_point_num;i++)
@@ -142,19 +147,26 @@ void initTouch()
 	}
 }
 
+//void toucuProc(I2C_HandleTypeDef hi2c1)
 void toucuProc()
 {
 	uint8_t point_num;
 	uint8_t i;
 	uint16_t x[max_point_num];
 	uint16_t y[max_point_num];
+
+	uint16_t id[max_point_num];
+
 	uint8_t dat[100];
+
 	if(touchIrq)
 	{
 		touchIrq=0;
 
-		readI2C(TOUCH_I2C_ID, 0x00, dat, 33);
+		readI2C(TOUCH_I2C_ID, 0x00, dat, 40);
+		//HAL_I2C_Mem_Read(&hi2c1, TOUCH_I2C_ID, 0x00, I2C_MEMADD_SIZE_8BIT, (uint8_t *)dat, 40, 200);
 
+		//HAL_I2C_Master_Receive_DMA()
 		//device mode[6:4]
 		//0 Work Mode
 		//4 Factory Mode
@@ -184,14 +196,59 @@ void toucuProc()
 
 			x[i] = (((uint16_t)dat[3+6*i]&0x0F)<<8)|dat[3+6*i+1];
 			y[i] = (((uint16_t)dat[3+6*i+2]&0x0F)<<8)|dat[3+6*i+3];
+
+			id[i] = dat[5+6*i]>>4;
+
 			if(x[i] > 1024)
 				x[i] = 1024;
 			if(y[i] > 600)
 				y[i] = 600;
 			x[i] = (x[i]*2048)/1024;// touch range ( 0 ~ 1024 ) to USB HID range (0 ~  2048)
 			y[i] = (y[i]*2048)/600; // touch range ( 0 ~ 1024 ) to USB HID range (0 ~  2048)
-		}
 
+			tpd_down(x[i], y[i], id[i]);
+
+
+			for(uint8_t c = 0; c < point_num; c++)
+			{
+				if(id[i] == oldid[c])
+				{
+					oldid[c]=255;
+				}
+
+			}
+
+		}
+		//input_sync();
+
+
+		for(i=0; i < point_num; i++)
+		{
+			if(oldid[i]!=255)
+			{
+					tpd_up(x[i], y[i], oldid[i]);
+
+			}
+			oldid[i] = id[i];
+		}
+		input_sync();
+
+		/*
+		input_sync();
+		for(i = 0; i < point_num; i++)
+		{
+			if(id[i]!=oldid[i])
+			{
+				tpd_up(x[i], y[i], oldid[i]);
+				//input_sync();
+			}
+			oldid[i] = id[i];
+		}
+		input_sync();
+		*/
+
+
+		/*
 		if(point_num > 0)
 		{
 			// pressed
@@ -225,5 +282,7 @@ void toucuProc()
 			input_sync();
 		}
 		p_point_num = point_num;
+		*/
+
 	}
 }
